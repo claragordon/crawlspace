@@ -19,9 +19,14 @@ class UrlResult:
 
 
 class TokenBucket:
-    """A threadsafe token bucket rate limiter.
-    capacity: max tokens that can accumulate in the bucket
-    per_second: tokens added to bucket per second
+    """
+    A threadsafe token bucket rate limiter.
+
+    Attributes:
+          capacity (int): Maximum number of tokens the bucket can hold.
+          rate_per_second (float): Rate at which tokens are added to the bucket.
+          tokens (float): Current number of available tokens.
+          last_updated (float): Last time the bucket was refilled, in unix seconds.
     """
 
     def __init__(self, capacity: int, rate_per_second: float):
@@ -53,6 +58,20 @@ class TokenBucket:
 
 
 class WebScraper:
+    """
+    A concurrent web scraper with rate limiting and crawl depth control.
+
+    It uses a pool of worker threads to fetch pages, extract metadata, and find outlinks.
+
+    Attributes:
+        max_workers (int): Number of worker threads to use parallel crawling.
+        max_depth (int): Maximum depth to follow outlinks from the initial URLs.
+        max_outlinks (int): Maximum number of outlinks to follow per crawled page.
+        urls_to_process (Queue[tuple[str,int]]): Thread-safe queue of (url, depth) items.
+        seen_urls: (set[str]): Set of already-visted urls.
+        results (Queue[UrlResult]): Thread-safe queue of crawl results.
+    """
+
     def __init__(
         self,
         max_workers: int,
@@ -68,8 +87,8 @@ class WebScraper:
         self.request_timeout = request_timeout
         self.urls_to_process = Queue()
         self.rate_limiter = TokenBucket(rate_capacity, rate_per_second)
-        self.seen_urls_lock = threading.Lock()
         self.seen_urls = set()
+        self.seen_urls_lock = threading.Lock()
         self.results = Queue()  # Threadsafe for storing crawl results
 
     def _fetch(self, url: str) -> Optional[str]:
@@ -136,12 +155,6 @@ class WebScraper:
 
         This method starts multiple worker threads to fetch and parse the given URLs,
         following their outbound links as needed.
-
-        Args:
-            urls (List[str]): Starting URLs to crawl.
-
-        Returns:
-            list[UrlResult]: Results containing metadata for each crawled URL.
         """
         with self.seen_urls_lock:
             self.seen_urls.clear()
