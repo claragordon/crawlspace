@@ -10,11 +10,7 @@ A tiny thread-based web scraper with a token bucket rate limiter.
 - CLI with sensible defaults
 - JSON output to a file or stdout
 
-## Exampe Command
-
-```bash
-python -m venv .venv && source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -r requirements.txt
+## Example Commands
 
 # Run with defaults
 python3 crawler.py https://www.nytimes.com https://www.bbc.com
