@@ -19,4 +19,3 @@ Run with defaults
 With all possible params set
 
 `python3 crawler.py --max-workers 5 --max-depth 2 --max-outlinks 5 --rate-capacity 5 --rate-per-second 1.0 --timeout 5.0 --out results.json https://example.com`
-```
