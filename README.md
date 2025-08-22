@@ -12,9 +12,9 @@ A tiny thread-based web scraper with a token bucket rate limiter.
 
 ## Example Commands
 
-# Run with defaults
-python3 crawler.py https://www.nytimes.com https://www.bbc.com
+Run with defaults
+`python3 crawler.py https://www.nytimes.com https://www.bbc.com`
 
-# With all possible params set
-python3 crawler.py --max-workers 5 --max-depth 2 --max-outlinks 5 --rate-capacity 5 --rate-per-second 1.0 --timeout 5.0 --out results.json https://example.com
+With all possible params set
+`python3 crawler.py --max-workers 5 --max-depth 2 --max-outlinks 5 --rate-capacity 5 --rate-per-second 1.0 --timeout 5.0 --out results.json https://example.com`
 ```
