@@ -90,12 +90,11 @@ class WebScraper:
         self.seen_urls = set()
         self.seen_urls_lock = threading.Lock()
         self.results = Queue()  # Threadsafe for storing crawl results
-        self.session = requests.Session()
 
     def _fetch(self, url: str) -> Optional[str]:
         self.rate_limiter.wait(1.0)
         try:
-            resp = self.session.get(url, timeout=self.request_timeout)
+            resp = requests.get(url, timeout=self.request_timeout)
             resp.raise_for_status()
             return resp.text
         except Exception as e:
