@@ -64,7 +64,7 @@ class WebScraper:
     It uses a pool of worker threads to fetch pages, extract metadata, and find outlinks.
 
     Attributes:
-        max_workers (int): Number of worker threads to use parallel crawling.
+        workers (int): Number of worker threads to use parallel crawling.
         max_depth (int): Maximum depth to follow outlinks from the initial URLs.
         max_outlinks (int): Maximum number of outlinks to follow per crawled page.
         urls_to_process (Queue[tuple[str,int]]): Thread-safe queue of (url, depth) items.
@@ -74,14 +74,14 @@ class WebScraper:
 
     def __init__(
         self,
-        max_workers: int,
+        workers: int,
         max_depth: int,
         max_outlinks: int,
         rate_capacity: int,
         rate_per_second: float,
         request_timeout: int,
     ):
-        self.max_workers = max_workers
+        self.workers = workers
         self.max_depth = max_depth
         self.max_outlinks = max_outlinks
         self.request_timeout = request_timeout
@@ -90,11 +90,12 @@ class WebScraper:
         self.seen_urls = set()
         self.seen_urls_lock = threading.Lock()
         self.results = Queue()  # Threadsafe for storing crawl results
+        self.session = requests.Session()
 
     def _fetch(self, url: str) -> Optional[str]:
         self.rate_limiter.wait(1.0)
         try:
-            resp = requests.get(url, timeout=self.request_timeout)
+            resp = self.session.get(url, timeout=self.request_timeout)
             resp.raise_for_status()
             return resp.text
         except Exception as e:
@@ -129,6 +130,8 @@ class WebScraper:
                 with self.seen_urls_lock:
                     if url in self.seen_urls:
                         continue
+                    if self.seen_urls and len(self.seen_urls) % 10 == 0:
+                        print(f"Processed {len(self.seen_urls)} urls")
                     self.seen_urls.add(url)
 
                 result = self._process_url(url)
@@ -156,18 +159,19 @@ class WebScraper:
         This method starts multiple worker threads to fetch and parse the given URLs,
         following their outbound links as needed.
         """
+        start = time.time()
         with self.seen_urls_lock:
             self.seen_urls.clear()
         for url in urls:
             self.urls_to_process.put((url, 0))
 
         threads = []
-        for _ in range(self.max_workers):
+        for _ in range(self.workers):
             t = threading.Thread(target=self._worker)
             t.start()
             threads.append(t)
         self.urls_to_process.join()
-        for _ in range(self.max_workers):
+        for _ in range(self.workers):
             self.urls_to_process.put((None, 0))  # Poison pill to stop worker loop
         for t in threads:
             t.join()  # Join threads to ensure the worker loops finish before proceeding
@@ -175,15 +179,17 @@ class WebScraper:
         final_results = []
         while not self.results.empty():
             final_results.append(self.results.get())
+        scrape_time = time.time() - start
+        print(f"URL scraped: {len(final_results)}")
+        print(f"Total scrape time: {scrape_time:.2f} seconds")
+        print(f"Mean time per url: {scrape_time / len(final_results):.2f} seconds")
         return final_results
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Threaded web scraper with rate limiting.")
     p.add_argument("urls", nargs="+", help="Seed URLs to scrape")
-    p.add_argument(
-        "--max-workers", type=int, default=5, help="Number of worker threads"
-    )
+    p.add_argument("--workers", type=int, default=5, help="Number of worker threads")
     p.add_argument("--max-depth", type=int, default=2, help="Maximum crawl depth")
     p.add_argument(
         "--max-outlinks", type=int, default=5, help="Maximum outlinks followed per page"
@@ -204,7 +210,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
 def main(argv: List[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     scraper = WebScraper(
-        args.max_workers,
+        args.workers,
         args.max_depth,
         args.max_outlinks,
         args.rate_capacity,
@@ -217,9 +223,6 @@ def main(argv: List[str] | None = None) -> int:
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
-    else:
-        json.dump(payload, sys.stdout, indent=2, ensure_ascii=False)
-        sys.stdout.write("\n")
 
 
 if __name__ == "__main__":
