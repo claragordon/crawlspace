@@ -197,7 +197,7 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
         "--rate-capacity", type=float, default=5.0, help="Token bucket capacity"
     )
     p.add_argument(
-        "--rate-per-second", type=float, default=1.0, help="Token bucket refill rate"
+        "--rate-per-second", type=float, default=10.0, help="Token bucket refill rate"
     )
     p.add_argument(
         "--timeout", type=float, default=5.0, help="HTTP request timeout in seconds"
