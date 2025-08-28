@@ -180,7 +180,7 @@ class WebScraper:
         while not self.results.empty():
             final_results.append(self.results.get())
         scrape_time = time.time() - start
-        print(f"URL scraped: {len(final_results)}")
+        print(f"URLs scraped: {len(final_results)}")
         print(f"Total scrape time: {scrape_time:.2f} seconds")
         print(f"Mean time per url: {scrape_time / len(final_results):.2f} seconds")
         return final_results
